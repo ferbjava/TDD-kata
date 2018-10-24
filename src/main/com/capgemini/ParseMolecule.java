@@ -67,9 +67,17 @@ public class ParseMolecule {
 			}
 
 		}
+		
+		ParseMolecule.addMolecule("C");
+		ParseMolecule.addMolecule("C");
+		ParseMolecule.addMolecule("Na");
 
 		return ParseMolecule.mol;
 //		return new HashMap<String, Integer>();
+	}
+
+	private static void addMolecule(String molecule) {
+		ParseMolecule.mol.compute(molecule, (k, v) -> v == null ? 1 : v + 1);
 	}
 
 	private static void verifyMolecule(String molecule) {
