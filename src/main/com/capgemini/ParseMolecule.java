@@ -19,65 +19,87 @@ public class ParseMolecule {
 
 	public static Map<String, Integer> getAtoms(String formula) {
 
+		System.out.println("molecule: " + formula.toString());
 		List<String> str = Arrays.stream(formula.split("")).collect(Collectors.toList());
 
-		List<String> molecules = new ArrayList<>();
-		List<String> moleculesInBrackets = new ArrayList<>();
-		List<Integer> occurence = new ArrayList<>();
-		List<Integer> leftBrackets = new ArrayList<>();
-		List<Integer> rightBrackets = new ArrayList<>();
-		Map<String, Integer> mol = new HashMap<>();
+		// List<Integer> leftBrackets = new ArrayList<>();
+		// List<Integer> rightBrackets = new ArrayList<>();
 
-		// mol.put("O", 3);
-		// mol.put("N", 2);
-		// mol.compute("Ca", (k, v) -> v == null ? 1 : v + 1);
-		// mol.compute("N", (k, v) -> v == null ? 1 : v + 1);
-		// System.out.println(mol.toString());
+		List<Integer> localOccurence = new ArrayList<>();
+		List<String> localMolecules = new ArrayList<>();
 
-		List<List<String>> globalList = new ArrayList<>();
-		List<String> localList = new ArrayList<>();
+		List<Integer> globalOccurence = new ArrayList<>();
+		List<String> globalMolecules = new ArrayList<>();
 
-		String molecule = "";
 		String recentMolecule = "";
-		Integer occur = 0;
+		Integer recentOccurence = 0;
 		for (int i = 0; i < str.size(); i++) {
 			String recentChar = str.get(i);
 
 			if (Character.isUpperCase(recentChar.toCharArray()[0])) {
 				verifyMolecule(recentMolecule);
-				localList.add(recentMolecule);
+				if (!recentMolecule.equals("")){
+					localMolecules.add(recentMolecule);
+					if (recentOccurence == 0) {
+						localOccurence.add(1);
+					} else {
+						localOccurence.add(recentOccurence);
+					}
+				}
+
+				recentOccurence = 0;
 				recentMolecule = recentChar;
+
 			} else if (Character.isLowerCase(recentChar.toCharArray()[0])) {
 				recentMolecule = recentMolecule.concat(recentChar);
-				verifyMolecule(recentMolecule);
-				localList.add(recentMolecule);
 
 			} else if (Character.isDigit(recentChar.toCharArray()[0])) {
-				globalList.add(localList);
-				localList.clear();
-				recentMolecule = "";
-				occur = occur * 10 + Integer.parseInt(recentChar);
-			} else if (recentChar.matches("(|[")) {
+				recentOccurence = recentOccurence * 10 + Integer.parseInt(recentChar);
 
-			} else if (recentChar.matches(")|]")) {
-				globalList.add(localList);
-				localList.clear();
+			} else if (recentChar.equals("[") || recentChar.equals("(")) {
+				verifyMolecule(recentMolecule);
+				if (!recentMolecule.equals("")){
+					localMolecules.add(recentMolecule);
+					if (recentOccurence == 0) {
+						localOccurence.add(1);
+					} else {
+						localOccurence.add(recentOccurence);
+					}
+				}
+				recentMolecule = "";
+				recentOccurence = 0;
+				globalMolecules.addAll(localMolecules);
+				globalOccurence.addAll(localOccurence);
+				localMolecules.clear();
+				localOccurence.clear();
+				
+			} else if (recentChar.equals("]") || recentChar.equals(")")) {
+				
+
 			} else {
 				throw new IllegalArgumentException();
 			}
-
 		}
-		
-		ParseMolecule.addMolecule("C");
-		ParseMolecule.addMolecule("C");
-		ParseMolecule.addMolecule("Na");
+
+		localMolecules.add(recentMolecule);
+		if (recentOccurence == 0) {
+			localOccurence.add(1);
+		} else {
+			localOccurence.add(recentOccurence);
+		}
+
+		globalMolecules.addAll(localMolecules);
+		globalOccurence.addAll(localOccurence);
+
+		for (int i = 0; i < globalMolecules.size(); i++) {
+			addMolecule(globalMolecules.get(i), globalOccurence.get(i));
+		}
 
 		return ParseMolecule.mol;
-//		return new HashMap<String, Integer>();
 	}
 
-	private static void addMolecule(String molecule) {
-		ParseMolecule.mol.compute(molecule, (k, v) -> v == null ? 1 : v + 1);
+	private static void addMolecule(String molecule, Integer occurence) {
+		ParseMolecule.mol.compute(molecule, (k, v) -> v == null ? occurence : v + occurence);
 	}
 
 	private static void verifyMolecule(String molecule) {

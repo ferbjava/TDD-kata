@@ -39,14 +39,4 @@ public class ParseMoleculeTest {
 		System.out.println(expected);
 		assertEquals(String.format("Should parse %s: %s", name, formula), expected, ParseMolecule.getAtoms(formula));
 	}
-
-	@Test
-	public void testMolecule02() {
-		System.out.println("My test");
-		Map<String, Integer> testMap = new HashMap<>();
-		testMap.put("C", 2);
-		testMap.put("Na", 1);
-		
-		assertEquals(testMap, ParseMolecule.getAtoms(formula));
-	}
 }
