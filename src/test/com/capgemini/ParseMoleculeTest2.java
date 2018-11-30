@@ -17,6 +17,8 @@ public class ParseMoleculeTest2 {
 		testMap.put("C", 2);
 		testMap.put("Na", 1);
 
-		assertEquals(testMap, ParseMolecule.getAtoms("C"));
+		assertEquals(testMap, ParseMolecule.getAtoms("]"));
 	}
+	
+	
 }
