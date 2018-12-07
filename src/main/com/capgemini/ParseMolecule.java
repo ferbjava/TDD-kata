@@ -26,13 +26,8 @@ public class ParseMolecule {
 	public static Map<String, Integer> getAtoms(String formula) {
 
 		List<String> chars = Arrays.asList(formula.split(""));
-
-//		List<String> moleculesGlobal = new ArrayList<>();
-//		List<Integer> occurenceGlobal = new ArrayList<>();
-
 		String recentMolecule = "";
 		Integer recentOccurence = 0;
-
 		Boolean wasPreviousBracket = false;
 
 		for (int i = 0; i < chars.size(); i++) {
@@ -41,9 +36,12 @@ public class ParseMolecule {
 			if (Character.isUpperCase(recentChar.toCharArray()[0])) {
 				verifyMolecule(recentMolecule);
 				addMoleculeToLocalBrackets(recentMolecule, recentOccurence);
+				if(wasPreviousBracket) {
+					
+				}
 				recentMolecule = recentChar;
-				recentOccurence = 1;
-				
+				recentOccurence = 0;
+
 				wasPreviousBracket = false;
 
 			} else if (Character.isLowerCase(recentChar.toCharArray()[0])) {
@@ -52,34 +50,41 @@ public class ParseMolecule {
 				addMoleculeToLocalBrackets(recentMolecule, recentOccurence);
 				recentMolecule = "";
 				recentOccurence = 0;
-				
+
 				wasPreviousBracket = false;
 
 			} else if (Character.isDigit(recentChar.toCharArray()[0])) {
-				if (!recentMolecule.equals("")) {
-					verifyMolecule(recentMolecule);
-					addMoleculeToLocalBrackets(recentMolecule, recentOccurence);
+				if (recentOccurence > 0) {
+					wasPreviousBracket = true;
+				} else {
+					wasPreviousBracket = false;
 				}
+
+				verifyMolecule(recentMolecule);
 				recentOccurence = recentOccurence * 10 + Integer.parseInt(recentChar);
-				
-				wasPreviousBracket = false;
-				
+
 			} else if (recentChar.matches("\\(|\\[")) {
 				verifyMolecule(recentMolecule);
 				addMoleculeToLocalBrackets(recentMolecule, recentOccurence);
-				
+				addLocalToGlobalStack();
+
+				wasPreviousBracket = false;
 
 			} else if (recentChar.matches("\\)|\\]")) {
-				if (wasPreviousBracket) {
-					
-				}
-				
+				addLocalToGlobalStack();
+
 				wasPreviousBracket = true;
 
 			} else {
 				throw new IllegalArgumentException();
 			}
 		}
+		
+		verifyMolecule(recentMolecule);
+		addMoleculeToLocalBrackets(recentMolecule, recentOccurence);
+		
+		addLocalToGlobalStack();
+		addToMoleMap();
 
 		////////////////////////////////////////////////////////////////////////////////
 		// System.out.println("molecule: " + formula.toString());
@@ -172,17 +177,35 @@ public class ParseMolecule {
 
 		return mol;
 	}
+	
+	private static void addToMoleMap() {
+		while (!moleculesGlobalStack.empty()) {
+			List<String> tempMoleculesList = moleculesGlobalStack.pop();
+			List<Integer> tempOccurenceList = occurenceGlobalStack.pop();
+			for (int i = 0; i < tempMoleculesList.size(); i++) {
+				String molecule = tempMoleculesList.get(i);
+				Integer occurence = tempOccurenceList.get(i);
+				mol.compute(molecule, (k, v) -> v == null ? occurence : v + occurence);
+			}
+		}
+	}
 
-//	private static void addMolecule(String molecule, Integer occurence) {
-//		ParseMolecule.mol.compute(molecule, (k, v) -> v == null ? occurence : v + occurence);
-//	}
+	private static void addLocalToGlobalStack () {
+		moleculesGlobalStack.push(new ArrayList<>(moleculesInLocalBrackets));
+		moleculesInLocalBrackets.clear();
+		
+		occurenceGlobalStack.push(new ArrayList<>(occurenceInLocalBrackets));
+		occurenceInLocalBrackets.clear();
+	}
 	
 	private static void addMoleculeToLocalBrackets(String molecule, Integer occurence) {
-		moleculesInLocalBrackets.add(molecule);
-		if(occurence == 0) {
-			occurenceInLocalBrackets.add(1);
-		} else {
-			occurenceInLocalBrackets.add(occurence);	
+		if (!molecule.equals("")) {
+			moleculesInLocalBrackets.add(molecule);
+			if(occurence == 0) {
+				occurenceInLocalBrackets.add(1);
+			} else {
+				occurenceInLocalBrackets.add(occurence);	
+			}	
 		}
 	}
 
