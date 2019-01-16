@@ -20,6 +20,6 @@ public class SolutionTest {
     public void testLong() {
       String input = "Samurai_Lake_right_Green_Black_Yellow_right_side_river_river_Ninja";
       System.out.println("input: "+input);      
-      assertEquals("theStealthWarrior", Solution.toCamelCase(input));
+      assertEquals("SamuraiLakeRightGreenBlackYellowRightSideRiverRiverNinja", Solution.toCamelCase(input));
     }
 }

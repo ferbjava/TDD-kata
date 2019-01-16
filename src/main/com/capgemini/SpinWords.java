@@ -5,9 +5,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.lang3.StringUtils;
-
 public class SpinWords {
 
 	public String spinWords(String sentence) {
@@ -15,12 +12,10 @@ public class SpinWords {
 		List<String> newSentence = new ArrayList<>();
 		for (String word : words) {
 			if (word.length() > 4) {
-				char[] wordArray = word.toCharArray();
-				ArrayUtils.reverse(wordArray);
-				word = new String(wordArray);
+				word = new StringBuilder(word).reverse().toString();
 			}
 			newSentence.add(word);
 		}
-		return StringUtils.join(newSentence, " ");
+		return String.join(" ", newSentence);
 	}
 }
