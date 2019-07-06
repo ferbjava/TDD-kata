@@ -9,203 +9,186 @@ import java.util.Stack;
 
 public class ParseMolecule {
 
+	private static Map<String, Integer> results = new HashMap<>();
+
 	private static List<String> atoms = Arrays.asList("H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne", "Na", "Mg",
 			"Al", "Si", "P", "S", "Cl", "Ar", "K", "Ca", "Sc", "Ti", "V", "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Zn",
 			"Ga", "Ge", "As", "Se", "Br", "Kr", "Rb", "Sr", "Y", "Zr", "Nb", "Mo", "Tc", "Ru", "Rh", "Pd", "Ag", "Cd",
 			"In", "Sn", "Sb", "Te", "I", "Xe", "Cs", "Ba", "Hf", "Ta", "W", "Re", "Os", "Ir", "Pt", "Au", "Hg", "Ti",
-			"Pb", "Bi", "Po", "At", "Rn");
+			"Pb", "Bi", "Po", "At", "Rn", "Fr", "Ra", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds", "Rg", "Cn", "Nh", "Fl",
+			"Mc", "Lv", "Ts", "Og", "La", "Ce", "Pr", "Nd", "Pm", "Sm", "Eu", "Gd", "Tb", "Dy", "Ho", "Er", "Tm", "Yb",
+			"Lu", "Ac", "Th", "Pa", "U", "Np", "Pu", "Am", "Cm", "Bk", "Cf", "Es", "Fm", "Md", "No", "Lr");
 
-	private static Map<String, Integer> mol = new HashMap<String, Integer>();
+	private static List<String> localMol = new ArrayList<>();
+	private static List<Integer> localNum = new ArrayList<>();
 
-	private static List<String> moleculesInLocalBrackets = new ArrayList<>();
-	private static List<Integer> occurenceInLocalBrackets = new ArrayList<>();
-	
-	private static Stack<List<String>> moleculesGlobalStack = new Stack<>();
-	private static Stack<List<Integer>> occurenceGlobalStack = new Stack<>();
+	private static Stack<List<String>> globalMolsStack = new Stack<>();
+	private static Stack<List<Integer>> globalIntsStack = new Stack<>();
+	private static Stack<String> brackets = new Stack<>();
 
 	public static Map<String, Integer> getAtoms(String formula) {
+		results.clear();
+		localMol.clear();
+		localNum.clear();
+		globalIntsStack.clear();
+		globalMolsStack.clear();
+		brackets.clear();
 
-		List<String> chars = Arrays.asList(formula.split(""));
-		String recentMolecule = "";
-		Integer recentOccurence = 0;
-		Boolean wasPreviousBracket = false;
+		String[] strs = formula.split("(?:(?![a-z])(?:(?<!\\d)|(?!\\d)))");
 
-		for (int i = 0; i < chars.size(); i++) {
-			String recentChar = chars.get(i);
+		validateBrackets(Arrays.asList(strs));
 
-			if (Character.isUpperCase(recentChar.toCharArray()[0])) {
-				verifyMolecule(recentMolecule);
-				addMoleculeToLocalBrackets(recentMolecule, recentOccurence);
-				if(wasPreviousBracket) {
-					
-				}
-				recentMolecule = recentChar;
-				recentOccurence = 0;
+		boolean isPreviousMolecule = false;
+		boolean isBracketClosed = false;
 
-				wasPreviousBracket = false;
-
-			} else if (Character.isLowerCase(recentChar.toCharArray()[0])) {
-				recentMolecule = recentMolecule.concat(recentChar);
-				verifyMolecule(recentMolecule);
-				addMoleculeToLocalBrackets(recentMolecule, recentOccurence);
-				recentMolecule = "";
-				recentOccurence = 0;
-
-				wasPreviousBracket = false;
-
-			} else if (Character.isDigit(recentChar.toCharArray()[0])) {
-				if (recentOccurence > 0) {
-					wasPreviousBracket = true;
+		for (String str : strs) {
+			if (str.matches("[a-zA-Z]*")) {
+				checkIfPreviousIsMolecule(isPreviousMolecule);
+				verifyMolecule(str);
+				localMol.add(str);
+				isPreviousMolecule = true;
+				isBracketClosed = false;
+			} else if (str.matches("\\d*")) {
+				if (isBracketClosed) {
+					addLocal2Global(Integer.parseInt(str), brackets.size());
 				} else {
-					wasPreviousBracket = false;
+					localNum.add(Integer.parseInt(str));
 				}
-
-				verifyMolecule(recentMolecule);
-				recentOccurence = recentOccurence * 10 + Integer.parseInt(recentChar);
-
-			} else if (recentChar.matches("\\(|\\[")) {
-				verifyMolecule(recentMolecule);
-				addMoleculeToLocalBrackets(recentMolecule, recentOccurence);
-				addLocalToGlobalStack();
-
-				wasPreviousBracket = false;
-
-			} else if (recentChar.matches("\\)|\\]")) {
-				addLocalToGlobalStack();
-
-				wasPreviousBracket = true;
-
+				isPreviousMolecule = false;
+				isBracketClosed = false;
+			} else if (str.matches("\\(|\\[|\\{")) {
+				checkIfPreviousIsMolecule(isPreviousMolecule);
+				checkBrackets(brackets.size());
+				isPreviousMolecule = false;
+				isBracketClosed = false;
+				brackets.push(str);
+			} else if (str.matches("\\)|\\]|\\}")) {
+				checkIfPreviousIsMolecule(isPreviousMolecule);
+				checkIfCorrectBracket(str);
+				isPreviousMolecule = false;
+				isBracketClosed = true;
 			} else {
 				throw new IllegalArgumentException();
 			}
 		}
-		
-		verifyMolecule(recentMolecule);
-		addMoleculeToLocalBrackets(recentMolecule, recentOccurence);
-		
-		addLocalToGlobalStack();
-		addToMoleMap();
 
-		////////////////////////////////////////////////////////////////////////////////
-		// System.out.println("molecule: " + formula.toString());
-		// List<String> str =
-		//////////////////////////////////////////////////////////////////////////////// Arrays.stream(formula.split("")).collect(Collectors.toList());
-		//
-		// List<Integer> localOccurence = new ArrayList<>();
-		// List<String> localMolecules = new ArrayList<>();
-		//
-		// List<Integer> globalOccurence = new ArrayList<>();
-		// List<String> globalMolecules = new ArrayList<>();
-		//
-		// List<Integer> occcurenceInBrackets = new ArrayList<>();
-		// List<String> moleculesInBrackets = new ArrayList<>();
-		//
-		//
-		// String recentMolecule = "";
-		// Integer recentOccurence = 0;
-		// for (int i = 0; i < str.size(); i++) {
-		// String recentChar = str.get(i);
-		//
-		// if (Character.isUpperCase(recentChar.toCharArray()[0])) {
-		// verifyMolecule(recentMolecule);
-		// if (!recentMolecule.equals("")){
-		// localMolecules.add(recentMolecule);
-		// if (recentOccurence == 0) {
-		// localOccurence.add(1);
-		// } else {
-		// localOccurence.add(recentOccurence);
-		// }
-		// }
-		//
-		// recentOccurence = 0;
-		// recentMolecule = recentChar;
-		//
-		// } else if (Character.isLowerCase(recentChar.toCharArray()[0])) {
-		// recentMolecule = recentMolecule.concat(recentChar);
-		//
-		// } else if (Character.isDigit(recentChar.toCharArray()[0])) {
-		// recentOccurence = recentOccurence * 10 +
-		//////////////////////////////////////////////////////////////////////////////// Integer.parseInt(recentChar);
-		//
-		// } else if (recentChar.equals("[") || recentChar.equals("(")) {
-		// verifyMolecule(recentMolecule);
-		// if (!recentMolecule.equals("")){
-		// localMolecules.add(recentMolecule);
-		// if (recentOccurence == 0) {
-		// localOccurence.add(1);
-		// } else {
-		// localOccurence.add(recentOccurence);
-		// }
-		// }
-		// recentMolecule = "";
-		// recentOccurence = 0;
-		// globalMolecules.addAll(localMolecules);
-		// globalOccurence.addAll(localOccurence);
-		// localMolecules.clear();
-		// localOccurence.clear();
-		//
-		// } else if (recentChar.equals("]") || recentChar.equals(")")) {
-		// verifyMolecule(recentMolecule);
-		// if (!recentMolecule.equals("")){
-		// localMolecules.add(recentMolecule);
-		// if (recentOccurence == 0) {
-		// localOccurence.add(1);
-		// } else {
-		// localOccurence.add(recentOccurence);
-		// }
-		// }
-		//
-		// } else {
-		// throw new IllegalArgumentException();
-		// }
-		// }
-		//
-		// localMolecules.add(recentMolecule);
-		// if (recentOccurence == 0) {
-		// localOccurence.add(1);
-		// } else {
-		// localOccurence.add(recentOccurence);
-		// }
-		//
-		// globalMolecules.addAll(localMolecules);
-		// globalOccurence.addAll(localOccurence);
-		//
-		// for (int i = 0; i < globalMolecules.size(); i++) {
-		// addMolecule(globalMolecules.get(i), globalOccurence.get(i));
-		// }
-		///////////////////////////////////////////////////////////////////////////////
-
-		return mol;
-	}
-	
-	private static void addToMoleMap() {
-		while (!moleculesGlobalStack.empty()) {
-			List<String> tempMoleculesList = moleculesGlobalStack.pop();
-			List<Integer> tempOccurenceList = occurenceGlobalStack.pop();
-			for (int i = 0; i < tempMoleculesList.size(); i++) {
-				String molecule = tempMoleculesList.get(i);
-				Integer occurence = tempOccurenceList.get(i);
-				mol.compute(molecule, (k, v) -> v == null ? occurence : v + occurence);
+		if (!localMol.isEmpty()) {
+			if (isPreviousMolecule) {
+				localNum.add(1);
 			}
+			addToResults(localMol, localNum);
+		}
+
+		while (!globalMolsStack.isEmpty()) {
+			addToResults(globalMolsStack.pop(), globalIntsStack.pop());
+		}
+
+		return results;
+	}
+
+	private static void validateBrackets(List<String> list) {
+		Integer leftRound = 0;
+		Integer rightRound = 0;
+		Integer leftSquare = 0;
+		Integer rightSquare = 0;
+		Integer leftCurly = 0;
+		Integer rightCurly = 0;
+
+		for (String c : list) {
+			switch (c) {
+			case "(":
+				leftRound++;
+				break;
+			case ")":
+				rightRound++;
+				break;
+			case "[":
+				leftSquare++;
+				break;
+			case "]":
+				rightSquare++;
+				break;
+			case "{":
+				leftCurly++;
+				break;
+			case "}":
+				rightCurly++;
+				break;
+			default:
+				break;
+			}
+		}
+
+		if ((leftRound != rightRound) || (leftSquare != rightSquare)) {
+			throw new IllegalArgumentException();
 		}
 	}
 
-	private static void addLocalToGlobalStack () {
-		moleculesGlobalStack.push(new ArrayList<>(moleculesInLocalBrackets));
-		moleculesInLocalBrackets.clear();
-		
-		occurenceGlobalStack.push(new ArrayList<>(occurenceInLocalBrackets));
-		occurenceInLocalBrackets.clear();
+	private static void checkIfCorrectBracket(String str) {
+		switch (str) {
+		case ")":
+			if(!brackets.peek().equals("(")) throw new IllegalArgumentException();
+			break;
+		case "]":
+			if(!brackets.peek().equals("[")) throw new IllegalArgumentException();
+			break;
+		case "}":
+			if(!brackets.peek().equals("{")) throw new IllegalArgumentException();
+			break;
+		default:
+			break;
+		}
+		brackets.pop();
 	}
-	
-	private static void addMoleculeToLocalBrackets(String molecule, Integer occurence) {
-		if (!molecule.equals("")) {
-			moleculesInLocalBrackets.add(molecule);
-			if(occurence == 0) {
-				occurenceInLocalBrackets.add(1);
-			} else {
-				occurenceInLocalBrackets.add(occurence);	
-			}	
+
+	private static void addLocal2Global(Integer mult, int inBrackets) {
+		if (localMol.isEmpty()) {
+			localMol.addAll(globalMolsStack.pop());
+			localNum.addAll(globalIntsStack.pop());
+		}
+		for (int i = 0; i < localNum.size(); i++) {
+			localNum.set(i, localNum.get(i) * mult);
+		}
+
+		List<String> mols = new ArrayList<>();
+		List<Integer> occurs = new ArrayList<>();
+
+		if (!globalIntsStack.isEmpty()) {
+			mols = globalMolsStack.pop();
+			occurs = globalIntsStack.pop();
+		}
+		mols.addAll(localMol);
+		occurs.addAll(localNum);
+
+		globalMolsStack.push(new ArrayList<String>(mols));
+		globalIntsStack.push(new ArrayList<Integer>(occurs));
+
+		localMol.clear();
+		localNum.clear();
+	}
+
+	private static void checkBrackets(int inBrackets) {
+		if (inBrackets == 0) {
+			addToResults(localMol, localNum);
+		} else if (!localMol.isEmpty()) {
+			globalMolsStack.push(new ArrayList<String>(localMol));
+			globalIntsStack.push(new ArrayList<Integer>(localNum));
+		}
+		localMol.clear();
+		localNum.clear();
+	}
+
+	private static void addToResults(List<String> localMol, List<Integer> localNum) {
+		for (int i = 0; i < localMol.size(); i++) {
+			String molecule = localMol.get(i);
+			Integer occurence = localNum.get(i);
+			results.compute(molecule, (k, v) -> v == null ? occurence : v + occurence);
+		}
+	}
+
+	private static void checkIfPreviousIsMolecule(boolean isPreviousMolecule) {
+		if (isPreviousMolecule) {
+			localNum.add(1);
 		}
 	}
 
@@ -214,4 +197,5 @@ public class ParseMolecule {
 			throw new IllegalArgumentException();
 		}
 	}
+
 }
